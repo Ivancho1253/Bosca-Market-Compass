@@ -1,3 +1,4 @@
+// Patrón Repository — Abstrae el acceso a datos de la capa de lógica de negocio
 const db = require('../config/db');
 
 async function findAll() {
@@ -40,4 +41,34 @@ async function upsertValue({ countryId, indicatorId, year, value, normalizedScor
   );
 }
 
-module.exports = { findAll, findValuesByCountryYear, findAllValuesForYear, upsertValue };
+async function getByCountry(countryId, year) {
+  return findValuesByCountryYear(countryId, year);
+}
+
+async function getByIndicator(indicatorId) {
+  const { rows } = await db.query(
+    `SELECT iv.*, c.iso3, c.name AS country_name, c.region
+     FROM indicator_values iv
+     JOIN countries c ON c.id = iv.country_id
+     WHERE iv.indicator_id = $1
+     ORDER BY iv.year DESC, c.name`,
+    [indicatorId]
+  );
+  return rows;
+}
+
+async function getComparison(countryIds, indicatorIds) {
+  const { rows } = await db.query(
+    `SELECT iv.*, i.code, i.name AS indicator_name, i.dimension, i.unit, i.direction,
+            c.iso3, c.name AS country_name, c.region
+     FROM indicator_values iv
+     JOIN indicators i ON i.id = iv.indicator_id
+     JOIN countries c ON c.id = iv.country_id
+     WHERE iv.country_id = ANY($1::uuid[]) AND iv.indicator_id = ANY($2::uuid[])
+     ORDER BY c.name, i.dimension, iv.year DESC`,
+    [countryIds, indicatorIds]
+  );
+  return rows;
+}
+
+module.exports = { findAll, findValuesByCountryYear, findAllValuesForYear, upsertValue, getByCountry, getByIndicator, getComparison };

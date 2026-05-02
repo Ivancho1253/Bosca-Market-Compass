@@ -1,3 +1,4 @@
+// Patrón Repository — Abstrae el acceso a datos de la capa de lógica de negocio
 const db = require('../config/db');
 
 async function findAllForYear(year) {

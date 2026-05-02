@@ -3,6 +3,10 @@ const cors = require('cors');
 const morgan = require('morgan');
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 
+const alertObserver  = require('./observers/alertObserver');
+const alertHandler   = require('./observers/alertHandler');
+alertObserver.subscribe(alertHandler);
+
 const app = express();
 
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));

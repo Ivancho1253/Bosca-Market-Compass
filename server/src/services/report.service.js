@@ -1,6 +1,5 @@
-const db = require('../config/db');
-const scoreRepo = require('../repositories/score.repository');
-const indicatorRepo = require('../repositories/indicator.repository');
+const scoreRepo  = require('../repositories/score.repository');
+const reportRepo = require('../repositories/report.repository');
 
 async function generateExecutiveReport({ year, countries }) {
   const allScores = await scoreRepo.findAllForYear(year);
@@ -13,13 +12,13 @@ async function generateExecutiveReport({ year, countries }) {
   const top3 = filtered.slice(0, 3);
 
   const recommendations = top3.map(s => ({
-    iso3: s.iso3,
-    country: s.country_name,
-    score: parseFloat(s.total_score).toFixed(1),
-    status: s.status,
+    iso3:        s.iso3,
+    country:     s.country_name,
+    score:       parseFloat(s.total_score).toFixed(1),
+    status:      s.status,
     explanation: s.explanation,
-    strengths: getStrengths(s),
-    risks: getRisks(s),
+    strengths:   getStrengths(s),
+    risks:       getRisks(s),
   }));
 
   const summary = top3.length > 0
@@ -30,46 +29,46 @@ async function generateExecutiveReport({ year, countries }) {
 
   const payload = { year, recommendations, filteredCountries: filtered.map(s => s.iso3) };
 
-  const { rows } = await db.query(
-    `INSERT INTO reports (title, year, summary, payload) VALUES ($1, $2, $3, $4) RETURNING *`,
-    [`Reporte ejecutivo de mercados ${year}`, year, summary, JSON.stringify(payload)]
-  );
+  const saved = await reportRepo.create({
+    title:   `Reporte ejecutivo de mercados ${year}`,
+    year,
+    summary,
+    payload,
+  });
 
-  return { ...rows[0], recommendations, summary };
+  return { ...saved, recommendations, summary };
 }
 
 function getStrengths(score) {
   const dims = [
-    { name: 'Indicadores económicos', val: score.economic_score },
-    { name: 'Actividad comercial', val: score.commercial_score },
-    { name: 'Tamaño de mercado', val: score.demand_score },
-    { name: 'Infraestructura logística', val: score.logistics_score },
-    { name: 'Estabilidad política', val: score.risk_score },
-    { name: 'Marco legal favorable', val: score.legal_score },
+    { name: 'Indicadores económicos',   val: score.economic_score   },
+    { name: 'Actividad comercial',       val: score.commercial_score },
+    { name: 'Tamaño de mercado',         val: score.demand_score     },
+    { name: 'Infraestructura logística', val: score.logistics_score  },
+    { name: 'Estabilidad política',      val: score.risk_score       },
+    { name: 'Marco legal favorable',     val: score.legal_score      },
   ];
   return dims.filter(d => d.val && parseFloat(d.val) >= 60).map(d => d.name).slice(0, 3);
 }
 
 function getRisks(score) {
   const dims = [
-    { name: 'Indicadores económicos débiles', val: score.economic_score },
-    { name: 'Baja actividad comercial', val: score.commercial_score },
-    { name: 'Mercado pequeño', val: score.demand_score },
-    { name: 'Logística deficiente', val: score.logistics_score },
-    { name: 'Inestabilidad política', val: score.risk_score },
-    { name: 'Barreras legales', val: score.legal_score },
+    { name: 'Indicadores económicos débiles', val: score.economic_score   },
+    { name: 'Baja actividad comercial',        val: score.commercial_score },
+    { name: 'Mercado pequeño',                 val: score.demand_score     },
+    { name: 'Logística deficiente',            val: score.logistics_score  },
+    { name: 'Inestabilidad política',          val: score.risk_score       },
+    { name: 'Barreras legales',                val: score.legal_score      },
   ];
   return dims.filter(d => !d.val || parseFloat(d.val) < 40).map(d => d.name).slice(0, 2);
 }
 
 async function listReports() {
-  const { rows } = await db.query('SELECT id, title, year, generated_by, summary, created_at FROM reports ORDER BY created_at DESC');
-  return rows;
+  return reportRepo.getAll();
 }
 
 async function getReportById(id) {
-  const { rows } = await db.query('SELECT * FROM reports WHERE id = $1', [id]);
-  return rows[0] || null;
+  return reportRepo.getById(id);
 }
 
 module.exports = { generateExecutiveReport, listReports, getReportById };
