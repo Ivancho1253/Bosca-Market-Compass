@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config import COUNTRIES, WB_INDICATORS, DEFAULT_START_YEAR, DEFAULT_END_YEAR, MACRO_SEED_CSV
+from config import COUNTRIES, WB_INDICATORS, DEFAULT_START_YEAR, DEFAULT_END_YEAR, MACRO_SEED_CSV, WB_PROJECTION_CSV, WB_LAST_REAL_YEAR
 from db import get_conn, get_country_map, get_indicator_map, upsert_indicator_value, upsert_market_score, insert_alert, create_etl_run, close_etl_run
 from sources.worldbank import fetch_all_wb_indicators
 from sources.comtrade import fetch_all_wine_imports
@@ -39,11 +39,21 @@ def main():
     source_summary = {'worldbank': 0, 'comtrade': 0, 'wits': 0, 'seed': 0}
 
     try:
-        # --- World Bank ---
+        # --- World Bank (solo hasta el último año con datos reales) ---
+        wb_real_end = min(end_year, WB_LAST_REAL_YEAR)
         print('\n[1/4] Descargando World Bank...')
-        wb_rows = fetch_all_wb_indicators(countries, WB_INDICATORS, start_year, end_year)
+        wb_rows = fetch_all_wb_indicators(countries, WB_INDICATORS, start_year, wb_real_end)
         source_summary['worldbank'] = len(wb_rows)
-        print(f'  WB total: {len(wb_rows)} registros')
+        print(f'  WB total: {len(wb_rows)} registros (hasta {wb_real_end})')
+
+        # --- Proyecciones WB para años sin datos reales (2025+) ---
+        projection_rows = []
+        if end_year > WB_LAST_REAL_YEAR and WB_PROJECTION_CSV.exists():
+            proj_df = pd.read_csv(WB_PROJECTION_CSV)
+            for _, row in proj_df.iterrows():
+                if row['iso3'] in countries and WB_LAST_REAL_YEAR < row['year'] <= end_year:
+                    projection_rows.append({'country_iso3': row['iso3'], 'internal_code': row['internal_code'], 'year': int(row['year']), 'value': row['value'], 'source_name': 'projection_seed', 'source_url': ''})
+            print(f'  Proyecciones {WB_LAST_REAL_YEAR+1}-{end_year}: {len(projection_rows)} registros (seed)')
 
         # --- Wine imports (Comtrade / seed) ---
         print('\n[2/4] Importación de vino...')
@@ -89,6 +99,9 @@ def main():
                 all_records.append({'country_iso3': r['country_iso3'], 'internal_code': 'score_logistico', 'year': r['year'], 'value': r['score_logistico'], 'source_name': 'seed_fallback', 'source_url': ''})
 
         for r in macro_rows:
+            all_records.append(r)
+
+        for r in projection_rows:
             all_records.append(r)
 
         for r in tariff_rows:

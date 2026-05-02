@@ -25,6 +25,8 @@ WB_INDICATORS = {
 
 SEED_CSV = Path(__file__).parent.parent / 'database' / 'seed' / 'wine_imports_seed.csv'
 MACRO_SEED_CSV = Path(__file__).parent.parent / 'database' / 'seed' / 'macro_seed.csv'
+WB_PROJECTION_CSV = Path(__file__).parent.parent / 'database' / 'seed' / 'worldbank_projection_seed.csv'
+WB_LAST_REAL_YEAR = 2024  # World Bank publica datos con ~1 año de retraso
 RAW_DIR = Path(__file__).parent / 'data' / 'raw'
 PROCESSED_DIR = Path(__file__).parent / 'data' / 'processed'
 
