@@ -1,0 +1,53 @@
+# Entorno
+.env
+*.env.local
+*.env.*.local
+
+# Node
+node_modules/
+client/node_modules/
+server/node_modules/
+dist/
+client/dist/
+.npm
+
+# Python
+scraper/.venv/
+scraper/__pycache__/
+scraper/sources/__pycache__/
+scraper/transform/__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+scraper/*.egg-info/
+
+# Datos cacheados del scraper (pueden ser grandes)
+scraper/data/raw/*
+scraper/data/processed/*
+!scraper/data/raw/.gitkeep
+!scraper/data/processed/.gitkeep
+
+# PostgreSQL Docker
+postgres_data/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Vite
+client/.vite/
